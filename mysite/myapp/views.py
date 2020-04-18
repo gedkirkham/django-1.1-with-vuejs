@@ -2,5 +2,10 @@
 from __future__ import unicode_literals
 
 from django.shortcuts import render
+from .models import Article
 
-# Create your views here.
+def index(request):
+    context = {
+        'article': Article.objects.order_by('-created')
+    }
+    return render(request, 'myapp/index.html', context)

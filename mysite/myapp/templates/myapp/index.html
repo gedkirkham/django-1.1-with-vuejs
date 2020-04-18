@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <title>Hello World</title>
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+    </head>
+    <body>
+        {% for a in article %}
+        <ul>
+            <li>{{ a.title }}</li>
+            <li>{{ a.desc }}</li>
+            <li>{{ a.created }}</li>
+        </ul>
+        {% endfor %}
+
+        <div id="app">
+            [[ title ]]
+            [[ articles ]]
+        </div>
+
+        <script src="https://cdn.jsdelivr.net/npm/vue/dist/vue.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/vue-resource/1.5.1/vue-resource.min.js"></script>
+        <script src="https://cdn.jsdelivr.net/npm/js-cookie@rc/dist/js.cookie.min.js"></script>
+
+        <script>
+            var app = new Vue({
+                delimiters: ["[[", "]]"],
+                el: '#app',
+                data: {
+                    articles: [],
+                    title: 'Hello Vue!'
+                },
+                created () {
+                    this.$http
+                        .get('http://127.0.0.1:8000/api/articles')
+                        .then(_resp => { this.articles = _resp.body})
+                        .catch(_error => { console.error(_error)})
+                }
+            })
+
+            Vue.http.interceptors.push(function (_request) {
+                if(_request.method === 'POST' || _request.method === 'PUT') {
+                    const TOKEN = Cookies.get('csrftoken')
+                    _request.headers.set('X-CSRFToken', TOKEN)
+                }
+            })
+        </script>
+    </body>
+</html>
