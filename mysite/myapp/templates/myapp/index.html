@@ -6,35 +6,202 @@
         <meta name="viewport" content="width=device-width, initial-scale=1">
     </head>
     <body>
-        {% for a in article %}
-        <ul>
-            <li>{{ a.title }}</li>
-            <li>{{ a.desc }}</li>
-            <li>{{ a.created }}</li>
-        </ul>
-        {% endfor %}
+        <section>
+            <header>
+                <h1>Data via template context:</h1>
+            </header>
+            
+            {% for a in article %}
+                <ul>
+                    <li>{{ a.title }}</li>
+                    <li>{{ a.desc }}</li>
+                    <li>{{ a.created }}</li>
+                </ul>   
+            {% endfor %}
+        </section>
+
+        <hr style="color: #EBEEF5" />
 
         <div id="app">
-            [[ title ]]
-            [[ articles ]]
-        </div>
+            <section id="filter-container">
+                <header>
+                    <h1>Data via REST API</h1>
+                </header>
 
-        <script src="https://cdn.jsdelivr.net/npm/vue/dist/vue.js"></script>
+                <section>
+                    <header>
+                        <h2>Filter</h2>
+                    </header>
+
+                    <div>
+                        <label for="checkbox">Enable/Disable:</label>
+                        <input type="checkbox" id="checkbox" v-model="filter.checked">
+                    </div>
+                    <div>
+                        <label for="date-from">From:</label>
+                        <input v-model="filter.date.from" id="date" type="datetime-local">
+                        <label for="date-to">To:</label>
+                        <input v-model="filter.date.to" id="date" type="datetime-local">
+                    </div>
+                    <div>
+                        <label for="id">ID:</label>
+                        <select v-model="filter.id" id="id">
+                            <option></option>
+                            <option v-for="(article, index) in initArticles" :key="index">[[ article.id ]]</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label for="search">Seach:</label>
+                        <input v-model="filter.search" id="search" />
+                    </div>
+                </section>
+
+                <hr style="color: #EBEEF5" />
+
+                <section id="table-container">
+                    <header>
+                        <h2>Table</h2>
+                    </header>
+
+                    
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Title</th>
+                                <th>Description</th>
+                                <th>Created</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr v-for="(article, index) in articles" :key="index">
+                                <td>
+                                    [[ article.id ]] - [[article.title]]
+                                </td>
+                                <td>
+                                    [[article.description]]
+                                </td>
+                                <td>
+                                    [[article.when_created]]
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </section>
+            </section>
+        </div>
+        
+        <style>
+            h1, h2 {
+                color: grey;
+            }
+            table {
+                border-spacing:0px;
+                width: 100%;
+                text-align: left;
+                color: #909399;
+            }
+            td, tr {
+                border-bottom: 1px solid #EBEEF5;
+                padding: 10px 2px;
+                position:relative;
+                width: 33%;
+            }
+            #filter-container div {
+                    padding:5px;
+            }
+        </style>
+
+        <script src="https://unpkg.com/vue/dist/vue.js"></script>
         <script src="https://cdnjs.cloudflare.com/ajax/libs/vue-resource/1.5.1/vue-resource.min.js"></script>
         <script src="https://cdn.jsdelivr.net/npm/js-cookie@rc/dist/js.cookie.min.js"></script>
-
         <script>
-            var app = new Vue({
+            new Vue({
                 delimiters: ["[[", "]]"],
                 el: '#app',
-                data: {
-                    articles: [],
-                    title: 'Hello Vue!'
+                data: { 
+                    localArticles: [],
+                    initArticles: [],
+                    filter: {
+                        checked: true,
+                        date: {
+                            from: '',
+                            to: ''
+                        },
+                        id: '',
+                        search: ''
+                    }
+                },
+                computed : {
+                    created () {
+                        return Number(this.filter.id)
+                    },
+                    checked () {
+                        return this.filter.checked
+                    },
+                    articles: {
+                        set (val) {
+                            this.localArticles.push(val)
+                        },
+                        get () {
+                            return this.filterData()
+                        }
+                    },
+                },
+                methods: {
+                    filterData () {
+                        if (this.checked) {
+                            return this.localArticles
+                                .filter(ITEM => {
+                                    if (this.created) return ITEM.id === this.created
+                                    return true
+                                })
+                                .filter(ITEM => { 
+                                    const ITEM_DATE = new Date(ITEM.when_created)
+                                    const FROM_DATE = new Date(this.filter.date.from)
+                                    const TO_DATE = new Date(this.filter.date.to)
+                                    return ITEM_DATE >= FROM_DATE && ITEM_DATE <= TO_DATE
+                                })
+                                .filter(ITEM => ITEM.description.includes(this.filter.search))
+                        } else return this.localArticles
+                    },
+                    setToAndFromFilter ({ OBJ, ITEM }) {
+                        const FROM_DATE = this.filter.date.from ? new Date(this.filter.date.from) : ''
+                        const TO_DATE = this.filter.date.to ? new Date(this.filter.date.to) : ''
+                        const ITEM_DATE_AS_DATE = new Date(ITEM.created)
+                        const ITEM_DATE_AS_STRING = OBJ.when_created
+                        
+                        if (!this.filter.date.from) this.filter.date.from = ITEM_DATE_AS_STRING
+                        else if (FROM_DATE > ITEM_DATE_AS_DATE) this.filter.date.from = ITEM_DATE_AS_STRING
+                        
+                        if (!this.filter.date.to) this.filter.date.to = ITEM_DATE_AS_STRING
+                        else if (TO_DATE < ITEM_DATE_AS_DATE) this.filter.date.to = ITEM_DATE_AS_STRING
+                    }
+                },
+                watch: {
+                    checked () {
+                        return this.filterData()
+                    }
                 },
                 created () {
                     this.$http
                         .get('http://127.0.0.1:8000/api/articles')
-                        .then(_resp => { this.articles = _resp.body})
+                        .then(_resp => { 
+                            const DATA = _resp.body
+                            DATA.forEach(ITEM => {
+                                const OBJ = {
+                                    id: ITEM.id,
+                                    description: ITEM.desc,
+                                    title: ITEM.title,
+                                    when_created: new Date(ITEM.created).toISOString().split('.')[0],
+                                }
+                                
+                                this.articles = OBJ
+
+                                this.setToAndFromFilter({ OBJ, ITEM })
+                            })
+
+                            this.initArticles = this.articles
+                        })
                         .catch(_error => { console.error(_error)})
                 }
             })

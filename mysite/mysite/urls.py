@@ -22,7 +22,7 @@ from rest_framework import serializers, viewsets, routers
 class UserSerializer(serializers.HyperlinkedModelSerializer):
     class Meta:
         model = Article
-        fields = ['title', 'desc', 'created', 'modified']
+        fields = ['id', 'title', 'desc', 'created']
 
 
 # ViewSets define the view behavior.
